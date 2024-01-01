@@ -2,7 +2,45 @@ import { marked } from 'marked';
 import { readFile, readdir } from 'node:fs/promises';
 import sanitizeHtml from 'sanitize-html';
 import matter from 'gray-matter';
+import qs from 'qs';
 
+export interface Review {
+  id: string;
+  attributes: {
+    slug: string;
+    title: string;
+    subtitle: string;
+    publishedAt: string;
+    image: {
+      data: {
+        attributes: {
+          url: string;
+        };
+      };
+    };
+    body: string;
+  };
+}
+export interface ReviewResponse {
+  slug: string;
+  title: string;
+  date: string;
+  image: string;
+  body: string;
+}
+
+export interface FullReview extends Review {
+  body: string;
+}
+
+interface ReviewFetchParams {
+  fields: string[];
+  populate: { image: { fields: string[] } } | { image: { fields: string[] } };
+  sort?: string[];
+  pagination: { pageSize: number; withCount: boolean } | { pageSize: number };
+  filters?: { slug: { $eq: string } };
+}
+// Functions to get reviews from local files
 export async function getReview(id: string) {
   const data = await readFile(`${process.cwd()}/app/content/reviews/${id}.md`, 'utf-8');
   const {
@@ -26,7 +64,65 @@ export async function getReviews() {
   return reviews;
 }
 
+// Functions to get reviews from Strapi CMS
+
+const baseUrl = 'http://localhost:1337';
+
+export async function fetchReviews(
+  params: Partial<ReviewFetchParams>,
+): Promise<Review[]> {
+  const url = `${baseUrl}/api/reviews?${qs.stringify(params, {
+    encodeValuesOnly: true,
+  })}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch Rviews from CMS: ${res?.statusText}`);
+  }
+  const { data } = await res.json();
+  return data;
+}
+
 export async function getSlugs() {
-  const filenames = await getReviewFilenames();
-  return filenames.map((filename) => ({ params: { id: filename } }));
+  const data = await fetchReviews({
+    fields: ['slug'],
+    sort: ['publishedAt:desc'],
+    pagination: { pageSize: 100 },
+  });
+  return data.map((review: Review) => review.attributes.slug);
+}
+
+function mapDataToReview(data: Review[]): ReviewResponse[] {
+  return data.map((review: Review) => ({
+    id: review.id,
+    slug: review.attributes.slug,
+    title: review.attributes.title,
+    date: review.attributes.publishedAt,
+    image: `${baseUrl}${review.attributes.image.data.attributes.url}`,
+    body: review.attributes.body,
+  }));
+}
+
+export async function getAllReviewsFromCms(): Promise<ReviewResponse[]> {
+  const data = await fetchReviews({
+    fields: ['slug', 'title', 'subtitle', 'publishedAt'],
+    populate: { image: { fields: ['url'] } },
+    sort: ['publishedAt:desc'],
+    pagination: { pageSize: 6 },
+  });
+  return mapDataToReview(data);
+}
+
+export async function getReviewFromCms(id: string): Promise<ReviewResponse> {
+  const data = await fetchReviews({
+    filters: { slug: { $eq: id } },
+    fields: ['slug', 'title', 'subtitle', 'publishedAt', 'body'],
+    populate: { image: { fields: ['url'] } },
+    pagination: { pageSize: 1, withCount: false },
+  });
+
+  return {
+    ...mapDataToReview(data)[0],
+    body: await marked(data[0].attributes.body),
+  };
 }
