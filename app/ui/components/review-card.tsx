@@ -5,6 +5,7 @@ interface ReviewCardProps {
   imageSrc: string;
   subHeader: string;
   href: string;
+  date: string;
   alt?: string;
 }
 
@@ -13,8 +14,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   subHeader,
   alt = '',
   href,
+  date,
   ...props
 }) => {
+  const formattedDate = `${new Date(date).getUTCFullYear()}/${new Date(
+    date,
+  ).getUTCMonth()}/${new Date(date).getUTCDate()}`;
   return (
     <div
       className="card bg-white rounded-lg shadow-sm border-solid border border-slate-400 hover:shadow-xl transition-shadow duration-200 "
@@ -29,6 +34,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           height={320}
         />
         <h3 className="px-2 py-4 text-xl font-bold mt-2 md:mt-0 md:py-1 ">{subHeader}</h3>
+        <p className="px-2 py-4 text-xl font-bold mt-2 md:mt-0 md:py-1 ">
+          Published: {formattedDate}
+        </p>
       </Link>
     </div>
   );
