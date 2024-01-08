@@ -12,12 +12,14 @@ export default async function Reviews() {
     <>
       <Heading level={1}>Reviews</Heading>
       <ul className="flex flex-col gap-4 ">
-        {reviews.map(({ date, image, slug, title }) => (
+        {reviews.map(({ date, image, slug, title, subtitle }, index) => (
           <li key={title}>
             <ReviewCard
+              priority={index === 0}
               href={`/reviews/${slug}`}
               imageSrc={image}
               subHeader={title}
+              subtitle={subtitle}
               date={date}
             />
           </li>

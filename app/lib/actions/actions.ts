@@ -24,6 +24,7 @@ export interface Review {
 export interface ReviewResponse {
   slug: string;
   title: string;
+  subtitle: string;
   date: string;
   image: string;
   body: string;
@@ -75,9 +76,9 @@ export async function fetchReviews(
     encodeValuesOnly: true,
   })}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { next: { tags: ['review'] } });
   if (!res.ok) {
-    throw new Error(`Failed to fetch Rviews from CMS: ${res?.statusText}`);
+    throw new Error(`Failed to fetch Reviews from CMS: ${res?.statusText}`);
   }
   const { data } = await res.json();
   return data;
@@ -100,6 +101,7 @@ function mapDataToReview(data: Review[]): ReviewResponse[] {
     date: review.attributes.publishedAt,
     image: `${baseUrl}${review.attributes.image.data.attributes.url}`,
     body: review.attributes.body,
+    subtitle: review.attributes.subtitle,
   }));
 }
 
@@ -113,7 +115,12 @@ export async function getAllReviewsFromCms(): Promise<ReviewResponse[]> {
   return mapDataToReview(data);
 }
 
-export async function getReviewFromCms(id: string): Promise<ReviewResponse> {
+export async function getReviewFromCms(
+  id: string,
+  options?: {
+    next?: { tags: string[] };
+  },
+): Promise<ReviewResponse> {
   const data = await fetchReviews({
     filters: { slug: { $eq: id } },
     fields: ['slug', 'title', 'subtitle', 'publishedAt', 'body'],
