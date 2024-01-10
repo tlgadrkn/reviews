@@ -1,4 +1,6 @@
-import Link from 'next/link';
+'use client';
+import React from 'react';
+import { NavLink } from './navLink';
 
 export const Navbar = () => {
   return (
@@ -6,20 +8,14 @@ export const Navbar = () => {
       <div className="h-16 mx-auto ">
         <ul className=" flex flex-shrink-0 gap-4">
           <li>
-            <Link href="/" className="text-blue-600 hover:text-blue-800">
-              Home
-            </Link>
+            <NavLink href="/">Home</NavLink>
           </li>
           <li>
-            <Link href="/about" className=" text-blue-600 hover:text-blue-800">
-              About
-            </Link>
+            <NavLink href="/about">About</NavLink>
           </li>
 
           <li>
-            <Link href="/reviews" className=" text-blue-600 hover:text-blue-800">
-              Reviews
-            </Link>
+            <NavLink href="/reviews">Reviews</NavLink>
           </li>
         </ul>
       </div>

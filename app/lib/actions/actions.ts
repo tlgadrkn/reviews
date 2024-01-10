@@ -34,11 +34,32 @@ export interface FullReview extends Review {
   body: string;
 }
 
+export interface PaginatedReviews {
+  pageCount: number;
+  reviews: ReviewResponse[];
+}
+
+type PaginationMeta = {
+  pagination: {
+    page: number;
+    pageSize: number;
+    pageCount: number;
+    total: number;
+  };
+};
+
+type ApiResponse<T> = {
+  data: T[];
+  meta: PaginationMeta;
+};
+
 interface ReviewFetchParams {
   fields: string[];
   populate: { image: { fields: string[] } } | { image: { fields: string[] } };
   sort?: string[];
-  pagination: { pageSize: number; withCount: boolean } | { pageSize: number };
+  pagination:
+    | { pageSize: number; withCount: boolean; page?: number }
+    | { pageSize: number };
   filters?: { slug: { $eq: string } };
 }
 // Functions to get reviews from local files
@@ -68,10 +89,11 @@ export async function getReviews() {
 // Functions to get reviews from Strapi CMS
 
 const baseUrl = 'http://localhost:1337';
+const PAGE_SIZE = 6;
 
 export async function fetchReviews(
   params: Partial<ReviewFetchParams>,
-): Promise<Review[]> {
+): Promise<ApiResponse<Review>> {
   const url = `${baseUrl}/api/reviews?${qs.stringify(params, {
     encodeValuesOnly: true,
   })}`;
@@ -80,12 +102,12 @@ export async function fetchReviews(
   if (!res.ok) {
     throw new Error(`Failed to fetch Reviews from CMS: ${res?.statusText}`);
   }
-  const { data } = await res.json();
+  const data = await res.json();
   return data;
 }
 
 export async function getSlugs() {
-  const data = await fetchReviews({
+  const { data } = await fetchReviews({
     fields: ['slug'],
     sort: ['publishedAt:desc'],
     pagination: { pageSize: 100 },
@@ -105,14 +127,18 @@ function mapDataToReview(data: Review[]): ReviewResponse[] {
   }));
 }
 
-export async function getAllReviewsFromCms(): Promise<ReviewResponse[]> {
-  const data = await fetchReviews({
+export async function getAllReviewsFromCms(page?: number): Promise<PaginatedReviews> {
+  const { data, meta } = await fetchReviews({
     fields: ['slug', 'title', 'subtitle', 'publishedAt'],
     populate: { image: { fields: ['url'] } },
     sort: ['publishedAt:desc'],
-    pagination: { pageSize: 6 },
+    pagination: { pageSize: PAGE_SIZE, page },
   });
-  return mapDataToReview(data);
+
+  return {
+    pageCount: meta?.pagination?.pageCount,
+    reviews: mapDataToReview(data),
+  };
 }
 
 export async function getReviewFromCms(
@@ -121,13 +147,12 @@ export async function getReviewFromCms(
     next?: { tags: string[] };
   },
 ): Promise<ReviewResponse> {
-  const data = await fetchReviews({
+  const { data } = await fetchReviews({
     filters: { slug: { $eq: id } },
     fields: ['slug', 'title', 'subtitle', 'publishedAt', 'body'],
     populate: { image: { fields: ['url'] } },
     pagination: { pageSize: 1, withCount: false },
   });
-
   return {
     ...mapDataToReview(data)[0],
     body: await marked(data[0].attributes.body),
