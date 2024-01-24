@@ -30,9 +30,7 @@ export default async function Reviews({
       <Heading level={1}>Reviews</Heading>
       <div className="flex justify-between">
         <PaginationBar pageCount={pageCount} currentPageNumber={page} href="/reviews" />
-        <Combobox
-          items={reviews.map(({ slug, title }) => ({ value: slug, label: title }))}
-        />
+        <Combobox />
       </div>
       <ul className="flex flex-col gap-4 ">
         {reviews.map(({ date, image, slug, title, subtitle }, index) => (

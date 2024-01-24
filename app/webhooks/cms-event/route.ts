@@ -4,8 +4,6 @@ import { NextRequest } from 'next/server';
 export async function POST(request: NextRequest) {
   const payload = await request.json();
   if (payload.model === 'review') {
-    console.log(payload);
-
     revalidateTag('review');
   }
   return new Response(null, { status: 204 });

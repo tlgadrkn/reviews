@@ -1,3 +1,5 @@
+import 'server-only'; // is the recommended using the server-only package to make sure server data fetching functions are never used on the client. this ensures that functions that are only meant to be used on the server are not accidentally used on the client.
+
 import { marked } from 'marked';
 import { readFile, readdir } from 'node:fs/promises';
 import sanitizeHtml from 'sanitize-html';
@@ -60,7 +62,7 @@ interface ReviewFetchParams {
   pagination:
     | { pageSize: number; withCount: boolean; page?: number }
     | { pageSize: number };
-  filters?: { slug: { $eq: string } };
+  filters?: { slug: { $eq: string } } | { title: { $containsi: string } };
 }
 // Functions to get reviews from local files
 export async function getReview(id: string) {
@@ -88,7 +90,7 @@ export async function getReviews() {
 
 // Functions to get reviews from Strapi CMS
 
-const baseUrl = 'http://localhost:1337';
+const baseUrl = process.env.CMS_URL;
 const PAGE_SIZE = 6;
 
 export async function fetchReviews(
@@ -104,6 +106,19 @@ export async function fetchReviews(
   }
   const data = await res.json();
   return data;
+}
+
+export async function searchReviews(query: string) {
+  const { data } = await fetchReviews({
+    filters: { title: { $containsi: query } },
+    fields: ['slug', 'title'],
+    sort: ['title'],
+    pagination: { pageSize: 5 },
+  });
+  return data.map((review: Review) => ({
+    slug: review.attributes.slug,
+    title: review.attributes.title,
+  }));
 }
 
 export async function getSlugs() {
